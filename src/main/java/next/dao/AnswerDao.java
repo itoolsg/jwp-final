@@ -1,7 +1,5 @@
 package next.dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -9,69 +7,47 @@ import java.util.ArrayList;
 import java.util.List;
 
 import next.model.Answer;
-import next.support.db.ConnectionManager;
 
 public class AnswerDao {
 
 	public void insert(Answer answer) throws SQLException {
-		Connection con = null;
-		PreparedStatement pstmt = null;
-		try {
-			con = ConnectionManager.getConnection();
-			String sql = "INSERT INTO ANSWERS (writer, contents, createdDate, questionId) VALUES (?, ?, ?, ?)";
-			pstmt = con.prepareStatement(sql);
-			pstmt.setString(1, answer.getWriter());
-			pstmt.setString(2, answer.getContents());
-			pstmt.setTimestamp(3, new Timestamp(answer.getTimeFromCreateDate()));
-			pstmt.setLong(4, answer.getQuestionId());
-			pstmt.executeUpdate();
-		} finally {
-			if (pstmt != null) {
-				pstmt.close();
-			}
+		String sql = "INSERT INTO ANSWERS (writer, contents, createdDate, questionId) VALUES (?, ?, ?, ?)";
+		boolean is_success = QueryTemplate.executeQuery(sql,
+				answer.getWriter(), answer.getContents(),
+				new Timestamp(answer.getTimeFromCreateDate()),
+				answer.getQuestionId());
 
-			if (con != null) {
-				con.close();
-			}
-		}		
+		if (!is_success)
+			return;
+
+		String countplussql = "update QUESTIONS set countOfComment = countOfComment + 1 where questionId = ?";
+		QueryTemplate.executeQuery(countplussql, answer.getQuestionId());
+
 	}
 
-	public List<Answer> findAllByQuestionId(long questionId) throws SQLException {
-		Connection con = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try {
-			con = ConnectionManager.getConnection();
-			String sql = "SELECT answerId, writer, contents, createdDate FROM ANSWERS WHERE questionId = ? " + 
-					"order by answerId desc";
-			pstmt = con.prepareStatement(sql);
-			pstmt.setLong(1, questionId);
+	public List<Answer> findAllByQuestionId(final long questionId)
+			throws SQLException {
 
-			rs = pstmt.executeQuery();
+		String sql = "SELECT answerId, writer, contents, createdDate FROM ANSWERS WHERE questionId = ? "
+				+ "order by answerId desc";
 
-			List<Answer> answers = new ArrayList<Answer>();
-			Answer answer = null;
-			while (rs.next()) {
-				answer = new Answer(
-						rs.getLong("answerId"),
-						rs.getString("writer"),
-						rs.getString("contents"),
-						rs.getTimestamp("createdDate"),
-						questionId);
-				answers.add(answer);
+		ReadTemplate<List<Answer>> template = new ReadTemplate<List<Answer>>(
+				sql, questionId) {
+			@Override
+			public List<Answer> read(ResultSet rs) throws SQLException {
+				List<Answer> answers = new ArrayList<Answer>();
+				Answer answer = null;
+				while (rs.next()) {
+					answer = new Answer(rs.getLong("answerId"),
+							rs.getString("writer"), rs.getString("contents"),
+							rs.getTimestamp("createdDate"), questionId);
+					answers.add(answer);
+				}
+				return answers;
 			}
 
-			return answers;
-		} finally {
-			if (rs != null) {
-				rs.close();
-			}
-			if (pstmt != null) {
-				pstmt.close();
-			}
-			if (con != null) {
-				con.close();
-			}
-		}
+		};
+
+		return template.execute();
 	}
 }

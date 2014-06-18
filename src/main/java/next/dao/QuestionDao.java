@@ -14,104 +14,60 @@ import next.support.db.ConnectionManager;
 public class QuestionDao {
 
 	public void insert(Question question) throws SQLException {
-		Connection con = null;
-		PreparedStatement pstmt = null;
-		try {
-			con = ConnectionManager.getConnection();
-			String sql = "INSERT INTO QUESTIONS (writer, title, contents, createdDate, countOfComment) VALUES (?, ?, ?, ?, ?)";
-			pstmt = con.prepareStatement(sql);
-			pstmt.setString(1, question.getWriter());
-			pstmt.setString(2, question.getTitle());
-			pstmt.setString(3, question.getContents());
-			pstmt.setTimestamp(4, new Timestamp(question.getTimeFromCreateDate()));
-			pstmt.setInt(5, question.getCountOfComment());
-
-			pstmt.executeUpdate();
-		} finally {
-			if (pstmt != null) {
-				pstmt.close();
-			}
-
-			if (con != null) {
-				con.close();
-			}
-		}		
+		String sql = "INSERT INTO QUESTIONS (writer, title, contents, createdDate, countOfComment) VALUES (?, ?, ?, ?, ?)";
+		QueryTemplate.executeQuery(sql, question.getWriter(), question
+				.getTitle(), question.getContents(),
+				new Timestamp(question.getTimeFromCreateDate()), question
+						.getCountOfComment());
 	}
 
 	public List<Question> findAll() throws SQLException {
-		Connection con = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try {
-			con = ConnectionManager.getConnection();
-			String sql = "SELECT questionId, writer, title, createdDate, countOfComment FROM QUESTIONS " + 
-					"order by questionId desc";
-			pstmt = con.prepareStatement(sql);
 
-			rs = pstmt.executeQuery();
+		String sql = "SELECT questionId, writer, title, createdDate, countOfComment FROM QUESTIONS "
+				+ "order by questionId desc";
+		ReadTemplate<List<Question>> template = new ReadTemplate<List<Question>>(
+				sql) {
 
-			List<Question> questions = new ArrayList<Question>();
-			Question question = null;
-			while (rs.next()) {
-				question = new Question(
-						rs.getLong("questionId"),
-						rs.getString("writer"),
-						rs.getString("title"),
-						null,
-						rs.getTimestamp("createdDate"),
-						rs.getInt("countOfComment"));
-				questions.add(question);
-			}
+			@Override
+			public List<Question> read(ResultSet rs) throws SQLException {
+				List<Question> questions = new ArrayList<Question>();
+				Question question = null;
+				while (rs.next()) {
+					question = new Question(rs.getLong("questionId"),
+							rs.getString("writer"), rs.getString("title"),
+							null, rs.getTimestamp("createdDate"),
+							rs.getInt("countOfComment"));
+					questions.add(question);
+				}
 
-			return questions;
-		} finally {
-			if (rs != null) {
-				rs.close();
+				return questions;
 			}
-			if (pstmt != null) {
-				pstmt.close();
-			}
-			if (con != null) {
-				con.close();
-			}
-		}
+		};
+
+		return template.execute();
 	}
 
 	public Question findById(long questionId) throws SQLException {
-		Connection con = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try {
-			con = ConnectionManager.getConnection();
-			String sql = "SELECT questionId, writer, title, contents, createdDate, countOfComment FROM QUESTIONS " + 
-					"WHERE questionId = ?";
-			pstmt = con.prepareStatement(sql);
-			pstmt.setLong(1, questionId);
+		String sql = "SELECT questionId, writer, title, contents, createdDate, countOfComment FROM QUESTIONS "
+				+ "WHERE questionId = ?";
 
-			rs = pstmt.executeQuery();
+		ReadTemplate<Question> template = new ReadTemplate<Question>(sql,
+				questionId) {
 
-			Question question = null;
-			if (rs.next()) {
-				question = new Question(
-						rs.getLong("questionId"),
-						rs.getString("writer"),
-						rs.getString("title"),
-						rs.getString("contents"),
-						rs.getTimestamp("createdDate"),
-						rs.getInt("countOfComment"));
+			@Override
+			public Question read(ResultSet rs) throws SQLException {
+				Question question = null;
+				if (rs.next()) {
+					question = new Question(rs.getLong("questionId"),
+							rs.getString("writer"), rs.getString("title"),
+							rs.getString("contents"),
+							rs.getTimestamp("createdDate"),
+							rs.getInt("countOfComment"));
+					return question;
+				}
+				return question;
 			}
-
-			return question;
-		} finally {
-			if (rs != null) {
-				rs.close();
-			}
-			if (pstmt != null) {
-				pstmt.close();
-			}
-			if (con != null) {
-				con.close();
-			}
-		}
+		};
+		return template.execute();
 	}
 }
