@@ -1,6 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
 	pageEncoding="UTF-8"%><%@ include file="/include/tags.jspf"%>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -59,7 +58,7 @@
 				<div class="comment">
 					<div class="comment-metadata">
 						<span class="comment-author">by ${answer.writer}</span> <span
-							class="comment-date"> ${answer.createdDate}</span>
+							class="comment-date"> <fmt:formatDate pattern="yyyy-MM-dd HH:mm:ss" value="${answer.createdDate}" /></span>
 					</div>
 					<div class="comment-content">
 						<div class="about">내용 :</div>
